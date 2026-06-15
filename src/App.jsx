@@ -1,11 +1,7 @@
-import { Button } from "@/components/ui/button"
+import ValidacionList from "@/pages/ValidacionList"
 
 function App() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <Button>Hola CIFI</Button>
-    </div>
-  )
+  return <ValidacionList />
 }
 
 export default App
