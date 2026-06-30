@@ -1,3 +1,5 @@
+import { useState, useEffect } from "react"
+import { Link } from "react-router-dom"
 import {
   Table,
   TableHeader,
@@ -7,6 +9,7 @@ import {
   TableCell,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -15,46 +18,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select"
-
-// Datos de prueba — luego vendrán del backend
-const participantes = [
-  {
-    id: "V-012",
-    nombre: "María García López",
-    institucion: "UACJ",
-    pago: "verificado",
-    academico: "pendiente",
-    estado: "pendiente",
-    fecha: "15/05/2026",
-  },
-  {
-    id: "V-011",
-    nombre: "Carlos Mendoza Ruiz",
-    institucion: "UNAM",
-    pago: "pendiente",
-    academico: "pendiente",
-    estado: "pendiente",
-    fecha: "14/05/2026",
-  },
-  {
-    id: "V-010",
-    nombre: "Laura Torres Vega",
-    institucion: "IPN",
-    pago: "rechazado",
-    academico: "verificado",
-    estado: "rechazado",
-    fecha: "12/05/2026",
-  },
-  {
-    id: "V-009",
-    nombre: "José Ramírez Flores",
-    institucion: "TEC MTY",
-    pago: "verificado",
-    academico: "verificado",
-    estado: "aprobado",
-    fecha: "10/05/2026",
-  },
-]
+import api from "@/lib/api"
 
 // Colores según el estado
 const estadoStyles = {
@@ -65,6 +29,7 @@ const estadoStyles = {
 }
 
 function EstadoBadge({ estado }) {
+  if (!estado) return null
   return (
     <Badge className={estadoStyles[estado]} variant="outline">
       {estado.charAt(0).toUpperCase() + estado.slice(1)}
@@ -73,8 +38,34 @@ function EstadoBadge({ estado }) {
 }
 
 export default function ValidacionList() {
+  const [validaciones, setValidaciones] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    api
+      .get("/validacion")
+      .then((response) => {
+        setValidaciones(response.data)
+        setLoading(false)
+      })
+      .catch((err) => {
+        console.error("Error al cargar validaciones:", err)
+        setError("No se pudo conectar con el servidor")
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) {
+    return <div className="p-8 text-slate-500">Cargando participantes...</div>
+  }
+
+  if (error) {
+    return <div className="p-8 text-red-600">{error}</div>
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div className="p-8">
       <h1 className="text-2xl font-bold text-navy mb-1">Validación</h1>
       <p className="text-slate-500 mb-6">Lista de participantes pendientes de revisión</p>
 
@@ -99,24 +90,28 @@ export default function ValidacionList() {
           <TableHeader>
             <TableRow>
               <TableHead>ID</TableHead>
-              <TableHead>Participante</TableHead>
-              <TableHead>Institución</TableHead>
-              <TableHead>Pago</TableHead>
-              <TableHead>Datos académicos</TableHead>
+              <TableHead>ID Participante</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>Fecha</TableHead>
+              <TableHead>Creado</TableHead>
+              <TableHead>Actualizado</TableHead>
+              <TableHead>Acciones</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {participantes.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.id}</TableCell>
-                <TableCell>{p.nombre}</TableCell>
-                <TableCell className="text-slate-500">{p.institucion}</TableCell>
-                <TableCell><EstadoBadge estado={p.pago} /></TableCell>
-                <TableCell><EstadoBadge estado={p.academico} /></TableCell>
-                <TableCell><EstadoBadge estado={p.estado} /></TableCell>
-                <TableCell className="text-slate-500">{p.fecha}</TableCell>
+            {validaciones.map((v) => (
+              <TableRow key={v.id}>
+                <TableCell className="font-medium">{v.id}</TableCell>
+                <TableCell>{v.idParticipante}</TableCell>
+                <TableCell><EstadoBadge estado={v.estado} /></TableCell>
+                <TableCell className="text-slate-500">{v.creadoEn}</TableCell>
+                <TableCell className="text-slate-500">{v.actualizadoEn}</TableCell>
+                <TableCell>
+                  <Link to={`/validacion/${v.id}`}>
+                    <Button size="sm" className="bg-gold text-navy font-semibold hover:bg-gold/90">
+                      Revisar
+                    </Button>
+                  </Link>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
