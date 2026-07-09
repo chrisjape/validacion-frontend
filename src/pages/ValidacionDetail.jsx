@@ -60,7 +60,7 @@ export default function ValidacionDetail() {
   const handleAprobar = () => {
     setProcesando(true)
     api
-      .put(`/validacion/${id}/aprobar`)
+      .put(`/validacion/${id}/aprobar-academico`)
       .then((response) => {
         setValidacion(response.data)
         setProcesando(false)
@@ -74,7 +74,7 @@ export default function ValidacionDetail() {
   const handleRechazar = () => {
     setProcesando(true)
     api
-      .put(`/validacion/${id}/rechazar`)
+      .put(`/validacion/${id}/rechazar-academico`)
       .then((response) => {
         setValidacion(response.data)
         setProcesando(false)

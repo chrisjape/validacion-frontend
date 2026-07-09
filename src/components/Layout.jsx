@@ -1,5 +1,5 @@
-import { Link, useLocation } from "react-router-dom"
-import { Home, Users, ShieldCheck, FileText, BarChart3, Settings, Bell, ChevronDown } from "lucide-react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
+import { ShieldCheck, Bell, LogOut } from "lucide-react"
 
 const navItems = [
   { label: "Validaciones", icon: ShieldCheck, path: "/" },
@@ -7,6 +7,18 @@ const navItems = [
 
 export default function Layout({ children }) {
   const location = useLocation()
+  const navigate = useNavigate()
+  const usuario = JSON.parse(localStorage.getItem("usuario") || "{}")
+
+  const handleLogout = () => {
+    localStorage.removeItem("usuario")
+    navigate("/login")
+  }
+
+  // Iniciales del usuario para el avatar
+  const iniciales = usuario.nombre
+    ? usuario.nombre.split(" ").map(n => n[0]).slice(0, 2).join("")
+    : "??"
 
   return (
     <div className="flex min-h-screen">
@@ -50,15 +62,21 @@ export default function Layout({ children }) {
 
       {/* Contenido principal */}
       <div className="flex-1 flex flex-col bg-slate-50">
-        <header className="h-13 bg-white border-b border-slate-200 flex items-center justify-end px-6 gap-4 py-3">
+        <header className="bg-white border-b border-slate-200 flex items-center justify-end px-6 gap-4 py-3">
           <Bell size={18} className="text-slate-400" />
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-full bg-navy text-gold text-[11px] font-bold flex items-center justify-center">
-              AD
+              {iniciales}
             </div>
-            <span className="text-sm text-navy font-medium">Admin</span>
-            <ChevronDown size={14} className="text-slate-400" />
+            <span className="text-sm text-navy font-medium">{usuario.nombre || "Usuario"}</span>
           </div>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-red-500 transition-colors"
+          >
+            <LogOut size={14} />
+            Salir
+          </button>
         </header>
 
         <main className="flex-1">{children}</main>
