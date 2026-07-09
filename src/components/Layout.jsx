@@ -2,12 +2,7 @@ import { Link, useLocation } from "react-router-dom"
 import { Home, Users, ShieldCheck, FileText, BarChart3, Settings, Bell, ChevronDown } from "lucide-react"
 
 const navItems = [
-  { label: "Dashboard", icon: Home, path: "/dashboard" },
-  { label: "Participantes", icon: Users, path: "/participantes" },
-  { label: "Validación", icon: ShieldCheck, path: "/" },
-  { label: "Documentos", icon: FileText, path: "/documentos" },
-  { label: "Reportes", icon: BarChart3, path: "/reportes" },
-  { label: "Configuración", icon: Settings, path: "/configuracion" },
+  { label: "Validaciones", icon: ShieldCheck, path: "/" },
 ]
 
 export default function Layout({ children }) {
