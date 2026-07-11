@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import api from "@/lib/api"
 
-
 const estadoStyles = {
   pendiente_academico: "bg-yellow-100 text-yellow-800 border-yellow-300",
   rechazado_academico: "bg-red-100 text-red-800 border-red-300",
@@ -49,8 +48,12 @@ export default function ParticipanteView() {
   const [palabras, setPalabras] = useState(["", "", "", "", ""])
   const [enviandoAcademico, setEnviandoAcademico] = useState(false)
 
+  // Comprobante
+  const [archivo, setArchivo] = useState(null)
+  const [subiendoArchivo, setSubiendoArchivo] = useState(false)
+  const [mensajeArchivo, setMensajeArchivo] = useState("")
+
   useEffect(() => {
-    // Por ahora usamos idParticipante = id del usuario
     api.get("/validacion")
       .then(res => {
         const miValidacion = res.data.find(v => v.idParticipante === usuario.id)
@@ -108,15 +111,36 @@ export default function ParticipanteView() {
 
     request.then(res => {
       setAcademica(res.data)
-      // Cambiar estado a en_correccion si fue rechazado
       if (validacion.estado === "rechazado_academico") {
         return api.put(`/validacion/${validacion.id}/en-correccion`)
       }
     })
-    .then(() => {
-      setEnviandoAcademico(false)
-    })
+    .then(() => setEnviandoAcademico(false))
     .catch(() => setEnviandoAcademico(false))
+  }
+
+  const handleSubirComprobante = () => {
+    if (!archivo) {
+      setMensajeArchivo("Selecciona un archivo PDF primero")
+      return
+    }
+    setSubiendoArchivo(true)
+    const formData = new FormData()
+    formData.append("archivo", archivo)
+    api.post(`/validacion-pago/subir-comprobante/${validacion.id}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    })
+    .then(() => {
+      setMensajeArchivo("✓ Comprobante subido correctamente")
+      setSubiendoArchivo(false)
+      setArchivo(null)
+      // Actualizar estado a pendiente_pago
+      return api.put(`/validacion/${validacion.id}/en-correccion`)
+    })
+    .catch(() => {
+      setMensajeArchivo("Error al subir el archivo, intenta de nuevo")
+      setSubiendoArchivo(false)
+    })
   }
 
   if (loading) return <div className="p-8 text-slate-500">Cargando tu información...</div>
@@ -129,14 +153,13 @@ export default function ParticipanteView() {
   )
 
   const puedeEditarAcademico = ["pendiente_academico", "rechazado_academico", "en_correccion_academico"].includes(validacion.estado)
-  const puedeSubirPago = validacion.estado === "aprobado_academico" || validacion.estado === "pendiente_pago"
+  const puedeSubirPago = validacion.estado === "aprobado_academico" || validacion.estado === "pendiente_pago" || validacion.estado === "pago_no_recibido"
 
   return (
     <div className="p-8 max-w-3xl">
       <h1 className="text-2xl font-bold text-navy mb-1">Mi validación</h1>
       <p className="text-slate-500 mb-4">Hola, {usuario.nombre}</p>
 
-      {/* Estado actual */}
       <div className="flex items-center gap-3 mb-6">
         <span className="text-sm text-slate-500">Estado actual:</span>
         <EstadoBadge estado={validacion.estado} />
@@ -145,9 +168,7 @@ export default function ParticipanteView() {
       {/* Fase 1 — Datos académicos */}
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle className="text-navy text-lg">
-            Fase 1 — Información académica
-          </CardTitle>
+          <CardTitle className="text-navy text-lg">Fase 1 — Información académica</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           {validacion.estado === "rechazado_academico" && (
@@ -205,7 +226,7 @@ export default function ParticipanteView() {
               {enviandoAcademico ? "Enviando..." : academica ? "Reenviar corrección" : "Enviar para revisión"}
             </Button>
           )}
-          {!puedeEditarAcademico && validacion.estado !== "pendiente_academico" && (
+          {!puedeEditarAcademico && (
             <p className="text-sm text-slate-400">✓ Información académica enviada y en proceso de revisión.</p>
           )}
         </CardContent>
@@ -216,25 +237,42 @@ export default function ParticipanteView() {
         <CardHeader>
           <CardTitle className="text-navy text-lg">Fase 2 — Comprobante de pago</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
           {!puedeSubirPago && validacion.estado !== "validado_completo" && (
             <p className="text-sm text-slate-400">
               Esta sección se habilitará una vez que tus datos académicos sean aprobados.
             </p>
           )}
           {puedeSubirPago && (
-            <div className="space-y-3">
+            <>
               {validacion.estado === "pago_no_recibido" && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
                   ⚠️ No se recibió tu pago. Por favor sube el comprobante nuevamente.
                 </div>
               )}
-              <p className="text-sm text-slate-600">Sube tu comprobante de pago en formato PDF.</p>
-              <input type="file" accept=".pdf" className="text-sm" />
-              <Button className="bg-navy hover:bg-navy/90 text-white">
-                Subir comprobante
+              <p className="text-sm text-slate-600">Sube tu comprobante de pago en formato PDF (máx. 10MB).</p>
+              <input
+                type="file"
+                accept=".pdf"
+                className="text-sm"
+                onChange={e => {
+                  setArchivo(e.target.files[0])
+                  setMensajeArchivo("")
+                }}
+              />
+              {mensajeArchivo && (
+                <p className={`text-sm ${mensajeArchivo.startsWith("✓") ? "text-green-600" : "text-red-600"}`}>
+                  {mensajeArchivo}
+                </p>
+              )}
+              <Button
+                onClick={handleSubirComprobante}
+                disabled={subiendoArchivo}
+                className="bg-navy hover:bg-navy/90 text-white"
+              >
+                {subiendoArchivo ? "Subiendo..." : "Subir comprobante"}
               </Button>
-            </div>
+            </>
           )}
           {validacion.estado === "validado_completo" && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm text-green-700">
@@ -253,12 +291,12 @@ export default function ParticipanteView() {
           <CardContent>
             <div className="space-y-3">
               {historial.map(h => (
-                <div key={h.id} className="flex items-start gap-3 text-sm">
+                <div key={h.id} className="flex items-start gap-3 text-sm border-b border-slate-100 pb-3 last:border-0">
                   <div className="w-2 h-2 rounded-full bg-navy mt-1.5 flex-shrink-0"></div>
                   <div>
-                    <p className="text-slate-700">{h.estadoNuevo.replace(/_/g, " ")}</p>
+                    <p className="text-slate-700">{estadoLabels[h.estadoNuevo] || h.estadoNuevo}</p>
                     {h.comentario && <p className="text-slate-400">{h.comentario}</p>}
-                    <p className="text-slate-400 text-xs">{h.fecha}</p>
+                    <p className="text-slate-400 text-xs">{h.fecha?.substring(0, 16).replace("T", " ")}</p>
                   </div>
                 </div>
               ))}
